@@ -1,0 +1,362 @@
+ 
+ 
+
+ ALTER FUNCTION [dbo].[ProcessTrimsCostForBkng](
+    @JobNoId INT
+)
+RETURNS TABLE
+AS
+RETURN 
+ with  
+tbl1 as(
+select   BuyerProfiles.ContactName as  BuyerName,
+ ord.BuyerID as BuyerId,
+ ord.Style_Ref as StyleRef,
+ ord.JobNo as JobName,
+'' as OrderNo,
+ 0 as PoDeptId,
+ trimCost.Id,
+  PrecostingId = trimCost.PrecostingId,
+  trimCost.GroupId,
+ trimCost.CountryId,
+ cnsmptn.Countries as CountryName,
+  trimCost.Description,
+ trimCost.BrandSupRef,
+   trimCost.Remarks,
+  trimCost.NominatedSuppId,
+  SupplierProfiles.SupplierName,
+    trimCost.ConsUOMId,
+   trimCost.ConsUnitGmts,
+   avg(cnsmptn.Rate)as Rate,-- group Avg()
+   avg(cnsmptn.Amount) as Amount,-- group Avg()
+   sum(cnsmptn.TotalQty)  as TotalQty,-- group sum()
+   sum(cnsmptn.TotalAmount)as  TotalAmount,-- group sum() 
+    trimCost.ApvlReq,
+     trimCost.ImagePath, 
+	  0	as IsTrimBookingComplete,
+ sum(cnsmptn.TotalQty) as ConsFromconsumption, 
+ 0 as Ex,
+ 0 as RateFromconsumption,
+ preCst.Fileno as FileNo,
+    preCst.internalRef as InternalRef ,
+    ItemGroups.ItemGroupName as  TrimsGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID as OrderAutoId,
+    trimCost.Id as TrimCostId,
+	'' as Gmtssizes,
+	0 as ConsumptionId,
+    cnsmptn.GmtsColor,
+    cnsmptn.RefNo,
+	cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	'' as ItemColor,
+	cnsmptn.PerAccessories,
+	sum(cnsmptn.viewModelTotalQuantity) as SizeQnty,
+	cnsmptn.mesurmentDescription
+
+from ConsumptionEntryFormForTrimsCosts cnsmptn 
+ left join TrimCosts as trimCost  on cnsmptn.TrimCostId=trimCost.Id
+ left join PreCostings as preCst on trimCost.PreCostingId=preCst.PrecostingId
+ left join  TblInitialOrders as ord  on preCst.OrderId=ord.OrderAutoID
+ -- left join TblPodetailsInfroes poDtls on ord.OrderAutoID=poDtls.InitialOrderID
+    left join ItemGroups on trimCost.GroupId=ItemGroups.Id
+	left join BuyerProfiles on ord.BuyerID=BuyerProfiles.Id
+	left join UOMs on trimCost.ConsUOMId=UOMs.Id
+	left join TblRegionInfoes as country on trimCost.CountryId=country.RegionID
+	left join SupplierProfiles on trimCost.NominatedSuppId=SupplierProfiles.Id
+  --  left join TrimsConsumtionTotalNAvgCaluculation() as trimsTotalNAvgCltn
+		-- on trimCost.Id=trimsTotalNAvgCltn.TrimsCostId 
+	 
+	  
+  where 
+  --trimCost.ConsUnitGmts>0 
+--  and cnsmtionEntryFrm.TotalQty>0 
+--and IsBookingComplete=0
+   preCst.PrecostingId is not null
+   and preCst.OrderId=@JobNoId
+    and preCst.ApprovalStatus=2  
+  and ReportType='As per Gmts. Color'
+  
+   and cnsmptn.Id is not null
+   group by   
+    BuyerProfiles.ContactName,ord.BuyerID,ord.Style_Ref,ord.JobNo,
+	trimCost.Id,trimCost.PrecostingId,trimCost.GroupId,trimCost.CountryId,
+	cnsmptn.Countries,trimCost.Description,trimCost.BrandSupRef,
+	trimCost.Remarks,trimCost.NominatedSuppId,SupplierProfiles.SupplierName,
+	trimCost.ConsUOMId,trimCost.ConsUnitGmts, trimCost.ApvlReq,
+     trimCost.ImagePath, preCst.Fileno,
+    preCst.internalRef,
+    ItemGroups.ItemGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID,
+    trimCost.Id,
+    cnsmptn.GmtsColor,
+   cnsmptn.RefNo,
+   cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	cnsmptn.PerAccessories,
+	cnsmptn.mesurmentDescription),
+	    
+tbl2 as(select   BuyerProfiles.ContactName as  BuyerName,
+ ord.BuyerID as BuyerId,
+ ord.Style_Ref as StyleRef,
+ ord.JobNo as JobName,
+'' as OrderNo,
+ 0 as PoDeptId,
+ trimCost.Id,
+  PrecostingId = trimCost.PrecostingId,
+  trimCost.GroupId,
+ trimCost.CountryId,
+ cnsmptn.Countries as CountryName,
+  trimCost.Description,
+ trimCost.BrandSupRef,
+   trimCost.Remarks,
+  trimCost.NominatedSuppId,
+  SupplierProfiles.SupplierName,
+    trimCost.ConsUOMId,
+   trimCost.ConsUnitGmts,
+   avg(cnsmptn.Rate)as Rate,-- group Avg()
+   avg(cnsmptn.Amount) as Amount,-- group Avg()
+   sum(cnsmptn.TotalQty)  as TotalQty,-- group sum()
+   sum(cnsmptn.TotalAmount)as  TotalAmount,-- group sum() 
+    trimCost.ApvlReq,
+     trimCost.ImagePath, 
+	  0	as IsTrimBookingComplete,
+ sum(cnsmptn.TotalQty) as ConsFromconsumption, 
+ 0 as Ex,
+ 0 as RateFromconsumption,
+ preCst.Fileno as FileNo,
+    preCst.internalRef as InternalRef ,
+    ItemGroups.ItemGroupName as  TrimsGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID as OrderAutoId,
+    trimCost.Id as TrimCostId,
+	cnsmptn.Gmtssizes as Gmtssizes,
+	0 as ConsumptionId,
+    '' as GmtsColor,
+    cnsmptn.RefNo,
+	cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	'' as ItemColor,
+	cnsmptn.PerAccessories,
+	sum(cnsmptn.viewModelTotalQuantity) as SizeQnty,
+	cnsmptn.mesurmentDescription
+
+from ConsumptionEntryFormForTrimsCosts cnsmptn 
+ left join TrimCosts as trimCost  on cnsmptn.TrimCostId=trimCost.Id
+ left join PreCostings as preCst on trimCost.PreCostingId=preCst.PrecostingId
+ left join  TblInitialOrders as ord  on preCst.OrderId=ord.OrderAutoID
+ -- left join TblPodetailsInfroes poDtls on ord.OrderAutoID=poDtls.InitialOrderID
+    left join ItemGroups on trimCost.GroupId=ItemGroups.Id
+	left join BuyerProfiles on ord.BuyerID=BuyerProfiles.Id
+	left join UOMs on trimCost.ConsUOMId=UOMs.Id
+	left join TblRegionInfoes as country on trimCost.CountryId=country.RegionID
+	left join SupplierProfiles on trimCost.NominatedSuppId=SupplierProfiles.Id
+  --  left join TrimsConsumtionTotalNAvgCaluculation() as trimsTotalNAvgCltn
+		-- on trimCost.Id=trimsTotalNAvgCltn.TrimsCostId 
+	 
+	  
+  where 
+  --trimCost.ConsUnitGmts>0 
+--  and cnsmtionEntryFrm.TotalQty>0 
+--and IsBookingComplete=0
+   preCst.PrecostingId is not null
+  and preCst.OrderId=@JobNoId
+   and preCst.ApprovalStatus=2 
+   and ReportType='Size Sensitive'
+  
+   and cnsmptn.Id is not null
+   group by   
+    BuyerProfiles.ContactName,ord.BuyerID,ord.Style_Ref,ord.JobNo,
+	trimCost.Id,trimCost.PrecostingId,trimCost.GroupId,trimCost.CountryId,
+	cnsmptn.Countries,trimCost.Description,trimCost.BrandSupRef,
+	trimCost.Remarks,trimCost.NominatedSuppId,SupplierProfiles.SupplierName,
+	trimCost.ConsUOMId,trimCost.ConsUnitGmts, trimCost.ApvlReq,
+     trimCost.ImagePath, preCst.Fileno,
+    preCst.internalRef,
+    ItemGroups.ItemGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID,
+    trimCost.Id,
+   cnsmptn.Gmtssizes,
+    cnsmptn.RefNo,
+   cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	cnsmptn.PerAccessories,
+	cnsmptn.mesurmentDescription),
+
+	tbl3 as(select   BuyerProfiles.ContactName as  BuyerName,
+ ord.BuyerID as BuyerId,
+ ord.Style_Ref as StyleRef,
+ ord.JobNo as JobName,
+'' as OrderNo,
+ 0 as PoDeptId,
+ trimCost.Id,
+  PrecostingId = trimCost.PrecostingId,
+  trimCost.GroupId,
+ trimCost.CountryId,
+ cnsmptn.Countries as CountryName,
+  trimCost.Description,
+ trimCost.BrandSupRef,
+   trimCost.Remarks,
+  trimCost.NominatedSuppId,
+  SupplierProfiles.SupplierName,
+    trimCost.ConsUOMId,
+   trimCost.ConsUnitGmts,
+   avg(cnsmptn.Rate)as Rate,-- group Avg()
+   avg(cnsmptn.Amount) as Amount,-- group Avg()
+   sum(cnsmptn.TotalQty)  as TotalQty,-- group sum()
+   sum(cnsmptn.TotalAmount)as  TotalAmount,-- group sum() 
+    trimCost.ApvlReq,
+     trimCost.ImagePath, 
+	  0	as IsTrimBookingComplete,
+ sum(cnsmptn.TotalQty) as ConsFromconsumption, 
+ 0 as Ex,
+ 0 as RateFromconsumption,
+ preCst.Fileno as FileNo,
+    preCst.internalRef as InternalRef ,
+    ItemGroups.ItemGroupName as  TrimsGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID as OrderAutoId,
+    trimCost.Id as TrimCostId,
+	cnsmptn.Gmtssizes as Gmtssizes,
+	0 as ConsumptionId,
+    cnsmptn.GmtsColor,
+    cnsmptn.RefNo,
+	cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	'' as ItemColor,
+	cnsmptn.PerAccessories,
+	sum(cnsmptn.viewModelTotalQuantity) as SizeQnty,
+	cnsmptn.mesurmentDescription
+
+from ConsumptionEntryFormForTrimsCosts cnsmptn 
+ left join TrimCosts as trimCost  on cnsmptn.TrimCostId=trimCost.Id
+ left join PreCostings as preCst on trimCost.PreCostingId=preCst.PrecostingId
+ left join  TblInitialOrders as ord  on preCst.OrderId=ord.OrderAutoID
+ -- left join TblPodetailsInfroes poDtls on ord.OrderAutoID=poDtls.InitialOrderID
+    left join ItemGroups on trimCost.GroupId=ItemGroups.Id
+	left join BuyerProfiles on ord.BuyerID=BuyerProfiles.Id
+	left join UOMs on trimCost.ConsUOMId=UOMs.Id
+	left join TblRegionInfoes as country on trimCost.CountryId=country.RegionID
+	left join SupplierProfiles on trimCost.NominatedSuppId=SupplierProfiles.Id
+   
+	 
+	  
+  where 
+   preCst.PrecostingId is not null
+  -- and preCst.PrecostingId=10028
+   and preCst.OrderId=@JobNoId
+    and preCst.ApprovalStatus=2 
+   and ReportType='Color & Size Sensitive'
+    
+   and cnsmptn.Id is not null
+   group by   
+    BuyerProfiles.ContactName,ord.BuyerID,ord.Style_Ref,ord.JobNo,
+	trimCost.Id,trimCost.PrecostingId,trimCost.GroupId,trimCost.CountryId,
+	cnsmptn.Countries,trimCost.Description,trimCost.BrandSupRef,
+	trimCost.Remarks,trimCost.NominatedSuppId,SupplierProfiles.SupplierName,
+	trimCost.ConsUOMId,trimCost.ConsUnitGmts, trimCost.ApvlReq,
+     trimCost.ImagePath, preCst.Fileno,
+    preCst.internalRef,
+    ItemGroups.ItemGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID,
+    trimCost.Id,
+   cnsmptn.Gmtssizes,
+   cnsmptn.GmtsColor,
+   cnsmptn.RefNo,
+   cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	cnsmptn.PerAccessories,
+	cnsmptn.mesurmentDescription), 
+
+
+		tbl4 as(select   BuyerProfiles.ContactName as  BuyerName,
+ ord.BuyerID as BuyerId,
+ ord.Style_Ref as StyleRef,
+ ord.JobNo as JobName,
+'' as OrderNo,
+ 0 as PoDeptId,
+ trimCost.Id,
+  PrecostingId = trimCost.PrecostingId,
+  trimCost.GroupId,
+ trimCost.CountryId,
+ cnsmptn.Countries as CountryName,
+  trimCost.Description,
+ trimCost.BrandSupRef,
+   trimCost.Remarks,
+  trimCost.NominatedSuppId,
+  SupplierProfiles.SupplierName,
+    trimCost.ConsUOMId,
+   trimCost.ConsUnitGmts,
+   avg(cnsmptn.Rate)as Rate,-- group Avg()
+   avg(cnsmptn.Amount) as Amount,-- group Avg()
+   sum(cnsmptn.TotalQty)  as TotalQty,-- group sum()
+   sum(cnsmptn.TotalAmount)as  TotalAmount,-- group sum() 
+    trimCost.ApvlReq,
+     trimCost.ImagePath, 
+	  0	as IsTrimBookingComplete,
+ sum(cnsmptn.TotalQty) as ConsFromconsumption, 
+ 0 as Ex,
+ 0 as RateFromconsumption,
+ preCst.Fileno as FileNo,
+    preCst.internalRef as InternalRef ,
+    ItemGroups.ItemGroupName as  TrimsGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID as OrderAutoId,
+    trimCost.Id as TrimCostId,
+	cnsmptn.Gmtssizes as Gmtssizes,
+	0 as ConsumptionId,
+    cnsmptn.GmtsColor,
+    cnsmptn.RefNo,
+	cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	cnsmptn.ItemColor,
+	cnsmptn.PerAccessories,
+	sum(cnsmptn.viewModelTotalQuantity) as SizeQnty,
+	cnsmptn.mesurmentDescription
+
+from ConsumptionEntryFormForTrimsCosts cnsmptn 
+ left join TrimCosts as trimCost  on cnsmptn.TrimCostId=trimCost.Id
+ left join PreCostings as preCst on trimCost.PreCostingId=preCst.PrecostingId
+ left join  TblInitialOrders as ord  on preCst.OrderId=ord.OrderAutoID
+ -- left join TblPodetailsInfroes poDtls on ord.OrderAutoID=poDtls.InitialOrderID
+    left join ItemGroups on trimCost.GroupId=ItemGroups.Id
+	left join BuyerProfiles on ord.BuyerID=BuyerProfiles.Id
+	left join UOMs on trimCost.ConsUOMId=UOMs.Id
+	left join TblRegionInfoes as country on trimCost.CountryId=country.RegionID
+	left join SupplierProfiles on trimCost.NominatedSuppId=SupplierProfiles.Id
+   
+	 
+	  
+  where 
+   preCst.PrecostingId is not null
+  -- and preCst.PrecostingId=10028
+   and preCst.OrderId=@JobNoId
+    and preCst.ApprovalStatus=2 
+   and ReportType='Contrast Color'
+    
+   and cnsmptn.Id is not null
+   group by   
+    BuyerProfiles.ContactName,ord.BuyerID,ord.Style_Ref,ord.JobNo,
+	trimCost.Id,trimCost.PrecostingId,trimCost.GroupId,trimCost.CountryId,
+	cnsmptn.Countries,trimCost.Description,trimCost.BrandSupRef,
+	trimCost.Remarks,trimCost.NominatedSuppId,SupplierProfiles.SupplierName,
+	trimCost.ConsUOMId,trimCost.ConsUnitGmts, trimCost.ApvlReq,
+     trimCost.ImagePath, preCst.Fileno,
+    preCst.internalRef,
+    ItemGroups.ItemGroupName,
+    UOMs.UomName,
+    ord.OrderAutoID,
+    trimCost.Id,
+   cnsmptn.Gmtssizes,
+   cnsmptn.GmtsColor,
+   cnsmptn.RefNo,
+   cnsmptn.GmtsItemId,
+	trimCost.ReportType,
+	cnsmptn.ItemColor,
+	cnsmptn.PerAccessories,
+	cnsmptn.mesurmentDescription)
+(select *  from  tbl1) union (select *  from  tbl2) union
+ (select *  from  tbl3) union (select * from tbl4)
