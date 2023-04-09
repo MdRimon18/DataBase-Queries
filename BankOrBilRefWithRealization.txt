@@ -1,0 +1,35 @@
+ 
+ 
+ALTER PROCEDURE [dbo].[BankOrBilRefWithRealization]
+AS
+BEGIN
+  with cte as (select rlz.*
+  --,bnk.InternalFileNo  select *from BnkRefExportInvoiceLcOrScConectivity() bnk where bnk.InternalFileNo in('www')
+  -- left join 
+ from  ExportProceedsRealizations rlz --on rlz.BillOrInvoiceId=bnk.Id --where bnk.InternalFileNo in(@InternalFileNo) 
+where rlz.Id is not null
+ ),
+TotalDistributions as (select MasterId,sum(DocumentCurrency)as TotalDistribution   from ExportProceedsRealizationDistributions
+                       group by MasterId),
+TotalDeduction as (select MasterId,sum(DocumentCurrency)as TotalDeduction  from ExportProceedsRealizationDeductionsatSources  
+                       group by MasterId) 
+
+	select cte.*,
+	--td.TotalDistribution,tdc.TotalDeduction,isnull(recieveAmount.Debit,0),isnull(transferAmount.Debit,0),
+	((isnull(td.TotalDistribution,0)+isnull(tdc.TotalDeduction,0)+isnull(recieveAmount.Credit,0))-isnull(transferAmount.Debit,0))TotalRealization,
+	isnull(tdc.TotalDeduction,0) as shortRealization,
+	'' as FileNo
+	from cte  left join TotalDistributions td on td.MasterId=cte.Id
+	  left join TotalDeduction tdc on tdc.MasterId=cte.Id
+
+	  left join (select BankRefId,sum(Debit)Debit from FCBRStatementEntry 
+ f left join ParticularType p on p.Id=f.Particular
+WHERE  p.ParticularValue NOT LIKE '%REC FROM FILE%' 
+group by BankRefId) as transferAmount on transferAmount.BankRefId=cte.BillOrInvoiceId
+
+left join (select BankRefId,sum(Credit)Credit from FCBRStatementEntry 
+ f left join ParticularType p on p.Id=f.Particular
+WHERE p.ParticularValue  LIKE '%REC FROM FILE%' group by BankRefId) as recieveAmount on recieveAmount.BankRefId=cte.BillOrInvoiceId
+
+end
+ --select *from BnkRefExportInvoiceLcOrScConectivity() bnk where bnk.InternalFileNo in('www')
